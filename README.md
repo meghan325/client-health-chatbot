@@ -1,21 +1,31 @@
 # Client Health Assessment Chatbot
 
-A Streamlit-based chatbot that analyzes client information and provides health evaluations using LLM APIs. The system categorizes clients into four health status categories and provides detailed assessments with recommendations.
+An AI-powered tool for analyzing advertising campaign health and providing actionable insights to optimize client performance and satisfaction. Built with FastAPI and supporting multiple LLM providers through LiteLLM.
 
 ## Features
 
-- **Comprehensive Client Analysis**: Evaluates symptoms, medical history, medications, lifestyle factors, and recent changes
-- **Four-Category Assessment System**:
-  - 🟢 **Healthy**: No immediate concerns
-  - 🟡 **Might Need Attention**: Monitoring recommended
-  - 🟠 **Need Attention - Positive**: Manageable situation requiring attention
-  - 🔴 **Need Attention - Negative**: Immediate attention required
-- **AI-Powered Evaluation**: Uses OpenAI GPT models for intelligent analysis
-- **Structured Output**: Provides confidence levels, reasoning, recommendations, and risk factors
-- **Export Functionality**: Download assessment reports as JSON files
-- **User-Friendly Interface**: Clean, intuitive Streamlit web interface
+- **Multi-Provider LLM Support**: Works with OpenAI, Anthropic, and other providers via LiteLLM
+- **Intelligent Campaign Analysis**: Uses AI models to evaluate campaign performance across multiple metrics
+- **Health Classification**: Categorizes campaigns into four distinct health levels:
+  - 🟢 **Campaign Healthy**: Performing well, on track
+  - 🟡 **Monitoring Needed**: Optimization opportunities exist
+  - 🟠 **Growth Opportunity**: Positive indicators for scaling
+  - 🔴 **Risk Management**: Immediate attention required
 
-## Installation
+- **Comprehensive Assessment**: Analyzes budget efficiency, performance metrics, client satisfaction, and campaign objectives
+- **Actionable Recommendations**: Provides specific, actionable recommendations for campaign optimization
+- **Risk & Opportunity Identification**: Highlights both potential risks and growth opportunities
+- **Conversation Tracing**: Optional tracing of all interactions for analysis and improvement
+- **Modern Web Interface**: Clean, responsive HTML/CSS/JS frontend similar to recipe-chatbot
+- **REST API**: FastAPI backend with full API documentation
+
+## Quick Start
+
+### Prerequisites
+- Python 3.8 or higher
+- API key for at least one supported LLM provider (OpenAI, Anthropic, etc.)
+
+### Installation
 
 1. **Clone or download this repository**
 2. **Install dependencies**:
@@ -23,112 +33,249 @@ A Streamlit-based chatbot that analyzes client information and provides health e
    pip install -r requirements.txt
    ```
 
-3. **Set up your API key** (choose one method):
-   
-   **Method 1: Environment Variable**
+3. **Set up your environment**:
    ```bash
-   export OPENAI_API_KEY="your_api_key_here"
+   cp env_example.txt .env
+   # Edit .env file and configure your API keys and model preference
+   ```
+
+4. **Run the application**:
+   ```bash
+   python start.py
    ```
    
-   **Method 2: Environment File**
-   - Copy `env_example.txt` to `.env`
-   - Add your API key to the `.env` file
-   
-   **Method 3: Enter in App**
-   - Run the app and enter your API key in the interface
+   Or directly with uvicorn:
+   ```bash
+   uvicorn backend.main:app --reload
+   ```
+
+The application will be available at `http://localhost:8000`
+
+## Configuration
+
+### Environment Variables (.env file)
+
+```bash
+# Model Configuration (LiteLLM format)
+MODEL_NAME=gpt-3.5-turbo
+# Alternatives:
+# MODEL_NAME=openai/gpt-4
+# MODEL_NAME=anthropic/claude-3-haiku-20240307
+
+# API Keys (add only the ones you need)
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Application Configuration
+MAX_TOKENS=1000
+TEMPERATURE=0.3
+
+# Tracing Configuration
+TRACE_ENABLED=true
+TRACES_DIRECTORY=traces
+MAX_TRACE_AGE_DAYS=30
+INCLUDE_SENSITIVE_DATA=false
+```
+
+### Supported LLM Providers
+
+Thanks to LiteLLM, you can use any of these providers:
+- **OpenAI**: `gpt-3.5-turbo`, `gpt-4`, `gpt-4-turbo`
+- **Anthropic**: `claude-3-haiku-20240307`, `claude-3-sonnet-20240229`
+- **Cohere**: `command-nightly`
+- **Replicate**: Various open-source models
+- **Hugging Face**: Various models
+- And many more - see [LiteLLM docs](https://litellm.vercel.app/docs/providers)
 
 ## Usage
 
-1. **Start the application**:
-   ```bash
-   streamlit run app.py
-   ```
+### Web Interface
 
-2. **Open your browser** and navigate to the provided URL (usually `http://localhost:8501`)
+1. **Navigate to Campaign Analysis**:
+   - Open `http://localhost:8000` in your browser
+   - Fill out the campaign information form
+   - Click "Analyze Campaign Health"
 
-3. **Enter client information**:
-   - Client name and age
-   - Current symptoms
-   - Medical history
-   - Current medications
-   - Lifestyle factors
-   - Recent changes
+2. **View Results**:
+   - Health category classification with confidence level
+   - Detailed reasoning and analysis
+   - Specific action items and recommendations
+   - Risk factors and positive indicators
+   - Budget, performance, and client satisfaction assessments
 
-4. **Click "Analyze Client Health"** to get the assessment
+3. **View History**:
+   - Click "View History" to see past analyses
+   - Click on any analysis to view detailed results
+   - Conversation traces are automatically saved
 
-5. **Review the results**:
-   - Health category classification
-   - Confidence level
-   - Detailed reasoning
-   - Specific recommendations
-   - Risk factors identified
-   - Positive health indicators
+### API Endpoints
 
-6. **Export report** (optional): Download a JSON report of the assessment
+The FastAPI backend provides REST endpoints:
 
-## Assessment Categories
+- **POST /api/analyze**: Analyze campaign health
+- **GET /api/conversations**: List all conversation history
+- **GET /api/conversations/{id}**: Get specific conversation details
+- **DELETE /api/conversations/{id}**: Delete a conversation
+- **GET /api/config**: Get current configuration
+- **GET /health**: Health check endpoint
 
-### 🟢 Healthy
-Client appears to be in good health with no immediate concerns. Regular monitoring may be sufficient.
+Full API documentation available at `http://localhost:8000/docs`
 
-### 🟡 Might Need Attention
-Client shows some indicators that warrant monitoring or mild intervention. Preventive measures recommended.
+### API Integration Example
 
-### 🟠 Need Attention - Positive
-Client requires attention but indicators suggest a positive or manageable situation. Proactive care recommended.
+```python
+import requests
 
-### 🔴 Need Attention - Negative
-Client requires immediate attention due to concerning indicators. Urgent care or professional consultation recommended.
+# Analyze campaign
+response = requests.post("http://localhost:8000/api/analyze", json={
+    "company_name": "Example Corp",
+    "account_manager": "John Doe",
+    "monthly_budget": 50000,
+    "campaign_duration_months": 6,
+    "campaign_objectives": "Brand awareness and lead generation",
+    "current_performance_metrics": "CTR: 2.3%, CPA: $45, ROAS: 3.2x",
+    "budget_utilization": "85% spend rate, on track",
+    "client_reported_notes": "Happy with performance",
+    "recent_changes_or_concerns": "None"
+})
 
-## API Configuration
+result = response.json()
+print(f"Category: {result['category']}")
+print(f"Confidence: {result['confidence']}%")
+```
 
-### OpenAI (Default)
-The application uses OpenAI's GPT models by default. You'll need an OpenAI API key from [OpenAI Platform](https://platform.openai.com/).
+## Project Structure
 
-### Alternative LLM Providers
-The code can be extended to support other LLM providers like:
-- Anthropic Claude
-- Hugging Face models
-- Azure OpenAI
-- Local models
+```
+client-health-chatbot/
+├── backend/
+│   ├── __init__.py
+│   ├── main.py              # FastAPI application
+│   ├── models.py            # Pydantic models
+│   ├── config.py            # Configuration management
+│   ├── client_evaluator.py  # Core evaluation logic
+│   └── trace_manager.py     # Conversation tracing
+├── frontend/
+│   ├── index.html           # Main web interface
+│   ├── style.css           # Styling
+│   └── script.js           # Frontend logic
+├── traces/                  # Conversation trace storage (auto-created)
+├── start.py                # Startup script
+├── requirements.txt        # Python dependencies
+├── env_example.txt         # Environment variable template
+├── README.md               # This file
+├── app.py                  # Legacy Streamlit app (can be removed)
+├── config.py               # Legacy config (can be removed)
+├── trace.py                # Legacy trace module (can be removed)
+├── test_chatbot.py         # Legacy test script
+└── TRACE_USAGE.md          # Tracing documentation
+```
 
-## Security and Privacy
+## Testing
 
-- **API Keys**: Never commit API keys to version control
-- **Client Data**: Client information is processed but not stored permanently
-- **HIPAA Compliance**: This tool is for general health monitoring and should not be used for protected health information without proper safeguards
+Test the application with sample data:
 
-## Disclaimer
+```bash
+# Test with the web interface
+curl -X POST "http://localhost:8000/api/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "company_name": "Test Corp",
+    "account_manager": "Jane Smith",
+    "monthly_budget": 25000,
+    "campaign_duration_months": 3,
+    "campaign_objectives": "Drive sales",
+    "current_performance_metrics": "CTR: 1.5%",
+    "budget_utilization": "90% utilized",
+    "client_reported_notes": "Concerned about costs",
+    "recent_changes_or_concerns": "Budget constraints"
+  }'
+```
 
-⚠️ **Important Medical Disclaimer**
+## Conversation Tracing
 
-This application is designed for general health monitoring and educational purposes only. It should NOT be used as:
-- A replacement for professional medical advice
-- A diagnostic tool for medical conditions
-- A substitute for consulting with healthcare professionals
+The application automatically traces conversations when enabled:
+- User requests with campaign information
+- AI responses with evaluations
+- Processing times and metadata
+- Error events for debugging
 
-Always consult with qualified healthcare providers for medical concerns and decisions.
+Traces are stored as JSON files in the `traces/` directory and can be viewed through the web interface or accessed via API.
+
+## Migration from Streamlit
+
+If you have the previous Streamlit version, the new FastAPI version provides:
+- **Better Performance**: Async processing and faster response times
+- **API Access**: RESTful endpoints for integration
+- **Multi-Provider Support**: Not limited to OpenAI
+- **Modern Frontend**: Responsive design without Streamlit dependencies
+- **Production Ready**: Better suited for deployment and scaling
+
+The old files (`app.py`, `config.py`, `trace.py`) can be safely removed after migration.
+
+## Deployment
+
+### Local Development
+```bash
+python start.py
+```
+
+### Production Deployment
+```bash
+# Using uvicorn directly
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# Using gunicorn with uvicorn workers
+gunicorn backend.main:app -w 4 -k uvicorn.workers.UvicornWorker
+```
+
+### Docker Deployment
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 8000
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **API Key Errors**
-   - Ensure your OpenAI API key is valid and has sufficient credits
-   - Check that the API key is properly set in environment variables or entered in the app
+1. **Import Errors**: Ensure you're running from the project root directory
+2. **API Key Errors**: Check your `.env` file configuration
+3. **Model Not Found**: Verify the MODEL_NAME format matches LiteLLM conventions
+4. **Port Already in Use**: Change the port in start.py or kill existing processes
 
-2. **Installation Issues**
-   - Make sure you have Python 3.8 or higher
-   - Use a virtual environment to avoid dependency conflicts
+### Getting Help
 
-3. **Streamlit Issues**
-   - Clear Streamlit cache: `streamlit cache clear`
-   - Restart the application
+1. Check the FastAPI logs for detailed error messages
+2. Visit `http://localhost:8000/docs` for API documentation
+3. Verify your `.env` configuration matches `env_example.txt`
+4. Test individual endpoints with curl or Postman
+
+## Security & Privacy
+
+- **Data Storage**: Conversation traces are stored locally, can be disabled
+- **API Security**: All API calls use secure connections
+- **Environment Variables**: Sensitive keys stored in `.env` (not committed)
+- **Input Validation**: Comprehensive input validation via Pydantic models
 
 ## Contributing
 
-Feel free to submit issues, feature requests, or pull requests to improve the application.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+The codebase is modular and designed for easy customization of evaluation logic, health categories, and frontend appearance.
 
 ## License
 
-This project is provided as-is for educational and general monitoring purposes.
+This project is provided as-is for advertising campaign analysis. Customize as needed for your organization.

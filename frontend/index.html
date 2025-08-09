@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Health Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>📺 Client Health Chatbot</h1>
+                    <p>AI-powered advertising campaign health analyzer</p>
+                </div>
+                <div class="header-actions">
+                    <button id="newAnalysisBtn" class="btn btn-primary">New Analysis</button>
+                    <button id="viewHistoryBtn" class="btn btn-secondary">View History</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <!-- Analysis Form -->
+            <div id="analysisSection" class="section">
+                <div class="form-container">
+                    <h2>Campaign Analysis</h2>
+                    <form id="analysisForm" class="analysis-form">
+                        <div class="form-group">
+                            <label for="companyName">Company Name *</label>
+                            <input type="text" id="companyName" name="companyName" required maxlength="100" 
+                                   placeholder="Enter advertiser company name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="accountManager">Account Manager *</label>
+                            <input type="text" id="accountManager" name="accountManager" required 
+                                   placeholder="Enter account manager name">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="monthlyBudget">Monthly Budget (USD) *</label>
+                                <input type="number" id="monthlyBudget" name="monthlyBudget" required 
+                                       min="0" max="10000000" step="0.01" value="50000"
+                                       placeholder="Enter monthly budget">
+                            </div>
+                            <div class="form-group">
+                                <label for="campaignDuration">Campaign Duration (months) *</label>
+                                <input type="number" id="campaignDuration" name="campaignDuration" required 
+                                       min="1" max="60" value="6"
+                                       placeholder="Enter duration">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="campaignObjectives">Campaign Objectives *</label>
+                            <textarea id="campaignObjectives" name="campaignObjectives" required 
+                                      maxlength="3000" rows="3"
+                                      placeholder="What are the main goals of this advertising campaign?"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="performanceMetrics">Current Performance Metrics *</label>
+                            <textarea id="performanceMetrics" name="performanceMetrics" required 
+                                      maxlength="3000" rows="3"
+                                      placeholder="CTR, CPA, ROAS, impressions, conversions, etc..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="budgetUtilization">Budget Utilization *</label>
+                            <textarea id="budgetUtilization" name="budgetUtilization" required 
+                                      maxlength="3000" rows="2"
+                                      placeholder="Spend rate, pacing, remaining budget, etc..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="clientNotes">Client Reported Notes *</label>
+                            <textarea id="clientNotes" name="clientNotes" required 
+                                      maxlength="3000" rows="3"
+                                      placeholder="Client feedback, satisfaction, concerns, requests..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="recentChanges">Recent Changes or Concerns</label>
+                            <textarea id="recentChanges" name="recentChanges" 
+                                      maxlength="3000" rows="2"
+                                      placeholder="Any recent changes in strategy, market conditions, or client concerns..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-large" id="analyzeBtn">
+                            📈 Analyze Campaign Health
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Results Container -->
+                <div id="resultsContainer" class="results-container" style="display: none;">
+                    <h2>Campaign Health Assessment</h2>
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div id="historySection" class="section" style="display: none;">
+                <div class="history-container">
+                    <h2>Analysis History</h2>
+                    <div id="historyContent">
+                        <div class="loading">Loading conversation history...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Modal -->
+        <div id="loadingModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="loading-spinner"></div>
+                <p>Analyzing campaign performance...</p>
+                <p class="loading-detail">This may take a few moments</p>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div id="errorModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Error</h3>
+                <p id="errorMessage"></p>
+                <button onclick="closeModal('errorModal')" class="btn btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

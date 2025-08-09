@@ -90,6 +90,19 @@ SECURITY_SETTINGS = {
     "log_client_data": False
 }
 
+# Trace settings
+TRACE_SETTINGS = {
+    "enabled": True,
+    "traces_directory": "traces",
+    "max_trace_age_days": 30,  # Keep traces for 30 days
+    "max_traces_per_session": 1000,  # Limit events per session
+    "auto_cleanup": True,  # Automatically clean up old traces
+    "export_formats": ["json"],
+    "include_sensitive_data": False,  # Don't trace sensitive client data by default
+    "trace_errors": True,
+    "trace_performance": True
+}
+
 def get_api_key() -> str:
     """Get API key from environment variables"""
     return os.getenv("OPENAI_API_KEY", "")

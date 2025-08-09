@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """
 Startup script for the Client Health Assessment Chatbot
-This script checks dependencies and starts the Streamlit application
+This script checks dependencies and starts the FastAPI application
 """
 
 import os
 import sys
 import subprocess
 import importlib.util
+from pathlib import Path
 
 def check_dependencies():
     """Check if all required dependencies are installed"""
     required_packages = [
-        'streamlit',
-        'openai'
+        'fastapi',
+        'uvicorn',
+        'litellm',
+        'pydantic'
     ]
     
     missing_packages = []
@@ -36,33 +39,80 @@ def install_dependencies():
         print("❌ Failed to install dependencies")
         return False
 
-def check_api_key():
-    """Check if API key is available"""
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("⚠️  OpenAI API key not found in environment variables")
-        print("You can:")
-        print("1. Set it as an environment variable: export OPENAI_API_KEY='your_key_here'")
-        print("2. Enter it in the web interface when prompted")
+def check_environment():
+    """Check environment configuration"""
+    env_file = Path(".env")
+    env_example = Path("env_example.txt")
+    
+    if not env_file.exists():
+        print("⚠️  .env file not found")
+        if env_example.exists():
+            print(f"📋 Please copy {env_example} to .env and configure your API keys")
+            print("   cp env_example.txt .env")
+        else:
+            print("📋 Please create a .env file with your API configuration")
+        print()
+    
+    # Check for at least one API key
+    api_keys = [
+        os.getenv("OPENAI_API_KEY"),
+        os.getenv("ANTHROPIC_API_KEY")
+    ]
+    
+    if not any(api_keys):
+        print("⚠️  No API keys found in environment variables")
+        print("Available providers:")
+        print("  - OpenAI: Set OPENAI_API_KEY")
+        print("  - Anthropic: Set ANTHROPIC_API_KEY")
+        print("  - See LiteLLM docs for more providers")
         print()
         return False
     else:
-        print("✅ OpenAI API key found")
+        providers = []
+        if os.getenv("OPENAI_API_KEY"):
+            providers.append("OpenAI")
+        if os.getenv("ANTHROPIC_API_KEY"):
+            providers.append("Anthropic")
+        print(f"✅ API keys found for: {', '.join(providers)}")
         return True
 
+def check_directories():
+    """Ensure required directories exist"""
+    directories = ['backend', 'frontend', 'traces']
+    
+    for directory in directories:
+        dir_path = Path(directory)
+        if not dir_path.exists():
+            print(f"📁 Creating directory: {directory}")
+            dir_path.mkdir(exist_ok=True)
+
 def start_application():
-    """Start the Streamlit application"""
+    """Start the FastAPI application"""
     print("🚀 Starting the Client Health Assessment Chatbot...")
-    print("The application will open in your default web browser")
+    print("The application will be available at: http://localhost:8000")
     print("Press Ctrl+C to stop the application")
     print()
     
     try:
-        subprocess.run([sys.executable, "-m", "streamlit", "run", "app.py"])
+        # Change to the project directory to ensure proper imports
+        os.chdir(Path(__file__).parent)
+        
+        # Start uvicorn server
+        subprocess.run([
+            sys.executable, "-m", "uvicorn", 
+            "backend.main:app", 
+            "--host", "0.0.0.0", 
+            "--port", "8000", 
+            "--reload"
+        ])
     except KeyboardInterrupt:
         print("\n👋 Application stopped")
     except Exception as e:
         print(f"❌ Error starting application: {str(e)}")
+        print("\nTroubleshooting tips:")
+        print("1. Make sure you're in the correct directory")
+        print("2. Check that backend/main.py exists")
+        print("3. Verify your .env configuration")
 
 def main():
     """Main startup function"""
@@ -84,8 +134,15 @@ def main():
     else:
         print("✅ All dependencies are installed")
     
-    # Check API key
-    check_api_key()
+    # Check directories
+    check_directories()
+    
+    # Check environment
+    has_api_keys = check_environment()
+    if not has_api_keys:
+        print("⚠️  Warning: No API keys configured. The application may not work properly.")
+        if input("Continue anyway? (y/n): ").lower() != 'y':
+            sys.exit(1)
     
     # Start application
     start_application()

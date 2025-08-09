@@ -6,7 +6,9 @@ from typing import Dict, List, Optional
 import json
 import re
 from datetime import datetime
+import time
 import config
+from trace import ConversationTracer
 
 # Configuration
 openai.api_key = config.get_api_key()
@@ -29,6 +31,7 @@ class CampaignEvaluator:
     
     def __init__(self):
         self.evaluation_categories = config.HEALTH_CATEGORIES
+        self.tracer = ConversationTracer(config.TRACE_SETTINGS["traces_directory"]) if config.TRACE_SETTINGS["enabled"] else None
     
     def create_evaluation_prompt(self, client_info: ClientInfo) -> str:
         """Create a structured prompt for LLM evaluation of advertising campaigns"""
@@ -80,6 +83,33 @@ IMPORTANT: Base your assessment on advertising campaign best practices and the p
     
     def evaluate_client(self, client_info: ClientInfo) -> Dict:
         """Send client information to LLM for evaluation"""
+        start_time = time.time()
+        request_event_id = None
+        
+        # Trace user request
+        if self.tracer and config.TRACE_SETTINGS["enabled"]:
+            client_data = {
+                "company_name": client_info.company_name,
+                "account_manager": client_info.account_manager,
+                "monthly_budget": client_info.monthly_budget,
+                "campaign_duration_months": client_info.campaign_duration_months
+            }
+            
+            # Include non-sensitive data based on settings
+            if config.TRACE_SETTINGS["include_sensitive_data"]:
+                client_data.update({
+                    "campaign_objectives": client_info.campaign_objectives,
+                    "current_performance_metrics": client_info.current_performance_metrics,
+                    "budget_utilization": client_info.budget_utilization,
+                    "client_reported_notes": client_info.client_reported_notes,
+                    "recent_changes_or_concerns": client_info.recent_changes_or_concerns
+                })
+            
+            request_event_id = self.tracer.trace_user_request(
+                company_name=client_info.company_name,
+                client_info=client_data
+            )
+        
         try:
             prompt = self.create_evaluation_prompt(client_info)
             
@@ -95,15 +125,15 @@ IMPORTANT: Base your assessment on advertising campaign best practices and the p
             
             # Extract JSON from response
             content = response.choices[0].message.content
+            processing_time = time.time() - start_time
             
             # Try to extract JSON from the response
             json_match = re.search(r'\{.*\}', content, re.DOTALL)
             if json_match:
                 evaluation = json.loads(json_match.group())
-                return evaluation
             else:
                 # Fallback if JSON parsing fails
-                return {
+                evaluation = {
                     "category": "might_need_attention",
                     "confidence": "50",
                     "reasoning": content,
@@ -114,13 +144,42 @@ IMPORTANT: Base your assessment on advertising campaign best practices and the p
                     "performance_assessment": "Analysis incomplete", 
                     "client_satisfaction": "Analysis incomplete"
                 }
+            
+            # Trace bot response
+            if self.tracer and config.TRACE_SETTINGS["enabled"] and request_event_id:
+                self.tracer.trace_bot_response(
+                    request_event_id=request_event_id,
+                    evaluation_result=evaluation,
+                    processing_time=processing_time if config.TRACE_SETTINGS["trace_performance"] else None,
+                    metadata={
+                        "openai_model": config.OPENAI_MODEL,
+                        "tokens_used": response.usage.total_tokens if hasattr(response, 'usage') else None
+                    }
+                )
+            
+            return evaluation
                 
         except Exception as e:
+            processing_time = time.time() - start_time
+            error_message = f"Error occurred during evaluation: {str(e)}"
+            
+            # Trace error
+            if self.tracer and config.TRACE_SETTINGS["enabled"] and config.TRACE_SETTINGS["trace_errors"]:
+                self.tracer.trace_error(
+                    error_message=str(e),
+                    error_type="evaluation_error",
+                    context={
+                        "company_name": client_info.company_name,
+                        "processing_time": processing_time,
+                        "openai_model": config.OPENAI_MODEL
+                    }
+                )
+            
             st.error(f"Error during evaluation: {str(e)}")
             return {
                 "category": "might_need_attention",
                 "confidence": "0",
-                "reasoning": f"Error occurred during evaluation: {str(e)}",
+                "reasoning": error_message,
                 "recommendations": ["Please try again or consult with account management team"],
                 "risk_factors": ["System error"],
                 "positive_indicators": [],
@@ -129,6 +188,111 @@ IMPORTANT: Base your assessment on advertising campaign best practices and the p
                 "client_satisfaction": "Analysis failed"
             }
 
+def show_trace_viewer():
+    """Display trace viewing interface"""
+    st.header("🔍 Conversation Traces")
+    
+    if not config.TRACE_SETTINGS["enabled"]:
+        st.warning("Tracing is currently disabled. Enable it in configuration to view traces.")
+        return
+    
+    tracer = ConversationTracer(config.TRACE_SETTINGS["traces_directory"])
+    sessions = tracer.list_all_sessions()
+    
+    if not sessions:
+        st.info("No conversation traces found yet. Start analyzing campaigns to create traces.")
+        return
+    
+    # Session selector
+    session_options = {
+        f"Session {session['session_id'][:8]} - {session['start_time'][:19]} ({session['event_count']} events)": session['session_id']
+        for session in sessions
+    }
+    
+    selected_session_display = st.selectbox(
+        "Select a conversation session to view:",
+        list(session_options.keys())
+    )
+    
+    if selected_session_display:
+        session_id = session_options[selected_session_display]
+        trace = tracer.load_trace(session_id)
+        
+        if trace:
+            # Session summary
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Events", len(trace.events))
+            with col2:
+                user_requests = sum(1 for e in trace.events if e.event_type == "user_request")
+                st.metric("User Requests", user_requests)
+            with col3:
+                bot_responses = sum(1 for e in trace.events if e.event_type == "bot_response")
+                st.metric("Bot Responses", bot_responses)
+            with col4:
+                errors = sum(1 for e in trace.events if e.event_type == "error")
+                st.metric("Errors", errors, delta_color="inverse")
+            
+            st.markdown("---")
+            
+            # Conversation history
+            history = tracer.get_conversation_history(session_id)
+            
+            for item in history:
+                timestamp = datetime.fromisoformat(item["timestamp"].replace('Z', '+00:00')).strftime("%H:%M:%S")
+                
+                if item["type"] == "user":
+                    with st.container():
+                        st.markdown(f"**👤 User Request** - {timestamp}")
+                        st.markdown(f"**Company:** {item['company']}")
+                        
+                        with st.expander("View request details"):
+                            st.json(item["content"])
+                
+                elif item["type"] == "bot":
+                    with st.container():
+                        st.markdown(f"**🤖 Bot Response** - {timestamp}")
+                        
+                        category_info = config.HEALTH_CATEGORIES.get(item["category"], {
+                            "name": "Unknown",
+                            "icon": "⚪"
+                        })
+                        
+                        col1, col2 = st.columns([2, 1])
+                        with col1:
+                            st.markdown(f"{category_info['icon']} **{category_info['name']}**")
+                        with col2:
+                            st.markdown(f"**Confidence:** {item['confidence']}%")
+                        
+                        with st.expander("View full evaluation"):
+                            st.json(item["content"])
+                
+                st.markdown("---")
+            
+            # Export options
+            st.subheader("📥 Export Options")
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                if st.button("📄 Export JSON", key=f"export_{session_id}"):
+                    export_data = tracer.export_trace(session_id, "json")
+                    st.download_button(
+                        label="Download Trace",
+                        data=export_data,
+                        file_name=f"trace_{session_id[:8]}.json",
+                        mime="application/json",
+                        key=f"download_{session_id}"
+                    )
+            
+            with col2:
+                if st.button("🗑️ Delete Trace", key=f"delete_{session_id}"):
+                    if tracer.delete_trace(session_id):
+                        st.success("Trace deleted successfully!")
+                        st.rerun()
+                    else:
+                        st.error("Failed to delete trace")
+
 def main():
     """Main Streamlit application"""
     st.set_page_config(
@@ -136,6 +300,14 @@ def main():
         page_icon="📺",
         layout="wide"
     )
+    
+    # Sidebar navigation
+    st.sidebar.title("Navigation")
+    page = st.sidebar.selectbox("Choose a page:", ["Campaign Analyzer", "Trace Viewer"])
+    
+    if page == "Trace Viewer":
+        show_trace_viewer()
+        return
     
     st.title("📺 AdTech Campaign Health Analyzer")
     st.markdown("---")
@@ -159,6 +331,27 @@ def main():
         "• **🔴 Risk Management**: Immediate attention required\n\n"
         "📊 **Analysis includes**: Budget efficiency, performance metrics, client satisfaction, and campaign objectives alignment."
     )
+    
+    # Show current session info if tracing is enabled
+    if config.TRACE_SETTINGS["enabled"]:
+        st.sidebar.header("🔍 Current Session")
+        tracer = ConversationTracer(config.TRACE_SETTINGS["traces_directory"])
+        session_id = tracer.get_session_id()
+        
+        st.sidebar.info(f"**Session ID**: {session_id[:8]}...")
+        
+        # Show session statistics
+        trace = tracer.load_trace(session_id)
+        if trace and trace.events:
+            requests = sum(1 for e in trace.events if e.event_type == "user_request")
+            responses = sum(1 for e in trace.events if e.event_type == "bot_response")
+            st.sidebar.metric("Requests this session", requests)
+            st.sidebar.metric("Responses this session", responses)
+        
+        if st.sidebar.button("🔄 Start New Session"):
+            tracer.end_session()
+            tracer.create_new_session()
+            st.rerun()
     
     # Create two columns for input and results
     col1, col2 = st.columns([1, 1])
