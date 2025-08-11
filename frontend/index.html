@@ -31,65 +31,41 @@
                     <h2>Campaign Analysis</h2>
                     <form id="analysisForm" class="analysis-form">
                         <div class="form-group">
-                            <label for="companyName">Company Name *</label>
-                            <input type="text" id="companyName" name="companyName" required maxlength="100" 
-                                   placeholder="Enter advertiser company name">
-                        </div>
+                            <label for="clientData">Client Information *</label>
+                            <div class="input-help">
+                                <p>Enter information for one or more clients. For multiple clients, separate each client with "---" or "CLIENT:" markers.</p>
+                                <details class="example-toggle">
+                                    <summary>Show example format</summary>
+                                    <div class="example-content">
+                                        <pre>CLIENT: ABC Company
+CSM: Emily Davis
+Budget Tier: Premium
+8-Week Spend Deviation: +5% over target
+2025 Projected Spend Deviation: Within 2% of plan
+Notes: Client is considering Q2 budget increase for mobile expansion
 
-                        <div class="form-group">
-                            <label for="accountManager">Account Manager *</label>
-                            <input type="text" id="accountManager" name="accountManager" required 
-                                   placeholder="Enter account manager name">
-                        </div>
+---
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="monthlyBudget">Monthly Budget (USD) *</label>
-                                <input type="number" id="monthlyBudget" name="monthlyBudget" required 
-                                       min="0" max="10000000" step="0.01" value="50000"
-                                       placeholder="Enter monthly budget">
+CLIENT: XYZ Corp
+CSM: Michael Chen
+Budget Tier: Standard
+8-Week Spend Deviation: -8% under target
+2025 Projected Spend Deviation: 15% below projected spend
+Notes: May need to adjust targeting strategy to improve lead quality</pre>
+                                    </div>
+                                </details>
                             </div>
-                            <div class="form-group">
-                                <label for="campaignDuration">Campaign Duration (months) *</label>
-                                <input type="number" id="campaignDuration" name="campaignDuration" required 
-                                       min="1" max="60" value="6"
-                                       placeholder="Enter duration">
-                            </div>
-                        </div>
+                            <textarea id="clientData" name="clientData" required 
+                                      rows="15"
+                                      placeholder="Enter client information here. You can include multiple clients by separating them with '---' or 'CLIENT:' markers.
 
-                        <div class="form-group">
-                            <label for="campaignObjectives">Campaign Objectives *</label>
-                            <textarea id="campaignObjectives" name="campaignObjectives" required 
-                                      maxlength="3000" rows="3"
-                                      placeholder="What are the main goals of this advertising campaign?"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="performanceMetrics">Current Performance Metrics *</label>
-                            <textarea id="performanceMetrics" name="performanceMetrics" required 
-                                      maxlength="3000" rows="3"
-                                      placeholder="CTR, CPA, ROAS, impressions, conversions, etc..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="budgetUtilization">Budget Utilization *</label>
-                            <textarea id="budgetUtilization" name="budgetUtilization" required 
-                                      maxlength="3000" rows="2"
-                                      placeholder="Spend rate, pacing, remaining budget, etc..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="clientNotes">Client Reported Notes *</label>
-                            <textarea id="clientNotes" name="clientNotes" required 
-                                      maxlength="3000" rows="3"
-                                      placeholder="Client feedback, satisfaction, concerns, requests..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="recentChanges">Recent Changes or Concerns</label>
-                            <textarea id="recentChanges" name="recentChanges" 
-                                      maxlength="3000" rows="2"
-                                      placeholder="Any recent changes in strategy, market conditions, or client concerns..."></textarea>
+Example for single client:
+Company: ABC Corp
+CSM: Emily Davis
+Budget Tier: Premium
+8-Week Spend Deviation: +5% over target
+2025 Projected Spend Deviation: Within 2% of plan
+Notes: Client considering Q2 budget increase"></textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-large" id="analyzeBtn">
@@ -138,3 +114,4 @@
     <script src="/static/script.js"></script>
 </body>
 </html>
+

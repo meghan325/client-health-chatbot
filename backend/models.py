@@ -10,12 +10,17 @@ class ClientAnalysisRequest(BaseModel):
     """Request model for client campaign analysis"""
     company_name: str = Field(..., min_length=1, max_length=100, description="Company name")
     account_manager: str = Field(..., description="Account manager name")
+    csm: str = Field(default="", description="Customer Success Manager name")
+    budget_tier: str = Field(default="", description="Budget tier classification")
     monthly_budget: float = Field(..., ge=0, le=10000000, description="Monthly budget in USD")
+    eight_week_spend_deviation: str = Field(default="", description="8-week spend deviation from target")
+    projected_2025_spend_deviation: str = Field(default="", description="2025 projected spend deviation")
     campaign_duration_months: int = Field(..., ge=1, le=60, description="Campaign duration in months")
     campaign_objectives: str = Field(..., description="Campaign objectives and goals")
     current_performance_metrics: str = Field(..., description="Current performance metrics (CTR, CPA, ROAS, etc.)")
     budget_utilization: str = Field(..., description="Budget utilization information")
     client_reported_notes: str = Field(..., description="Client feedback and notes")
+    notes: str = Field(default="", description="Additional notes and observations")
     recent_changes_or_concerns: str = Field(..., description="Recent changes or concerns")
 
 class ClientAnalysisResponse(BaseModel):
@@ -31,6 +36,7 @@ class ClientAnalysisResponse(BaseModel):
     performance_assessment: str = Field(default="", description="Performance metrics evaluation")
     client_satisfaction: str = Field(default="", description="Client relationship assessment")
     processing_time: float = Field(..., description="Processing time in seconds")
+    company_name: Optional[str] = Field(default="", description="Company name for display purposes")
 
 class ConversationResponse(BaseModel):
     """Response model for conversation list"""
@@ -46,8 +52,19 @@ class HealthCategory(BaseModel):
     icon: str = Field(..., description="Category icon")
     description: str = Field(..., description="Category description")
 
+class MultipleClientAnalysisRequest(BaseModel):
+    """Request model for multiple client campaign analysis"""
+    clients: List[ClientAnalysisRequest] = Field(..., description="List of clients to analyze")
+
+class MultipleClientAnalysisResponse(BaseModel):
+    """Response model for multiple client campaign analysis"""
+    results: List[ClientAnalysisResponse] = Field(..., description="Analysis results for each client")
+    total_processing_time: float = Field(..., description="Total processing time in seconds")
+    clients_analyzed: int = Field(..., description="Number of clients analyzed")
+
 class ErrorResponse(BaseModel):
     """Error response model"""
     error: str = Field(..., description="Error message")
     detail: Optional[str] = Field(None, description="Detailed error information")
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
